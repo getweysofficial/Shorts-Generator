@@ -4,6 +4,7 @@ A FastAPI-based backend service for generating short-form content from videos. T
 
 ## 🗂 Project Structure
 
+```bash
 shorts-generator/
 ├── src/
 │ └── shorts_generator/
@@ -19,6 +20,7 @@ shorts-generator/
 ├── pyproject.toml
 ├── README.md
 └── uv.lock
+```
 
 
 ## 🚀 Getting Started
