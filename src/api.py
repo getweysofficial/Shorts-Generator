@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor,as_completed
 
 from shorts_generator.video_processor import VideoProcessor
 from shorts_generator.audio_trancriber import AudioTranscriber
+from shorts_generator.shorts_agent import ShortsAgent
 
 from model import QueryRequest
 
@@ -62,7 +63,13 @@ async def get_shorts_from_video(request:QueryRequest):
 
     transcriptions.sort(key=lambda x: x["id"])
 
-    return transcriptions
+    agent = ShortsAgent(transcriptions,audio_split_timestamps)
+
+    video_detailed_timestamps = agent.video_timestamps()
+
+    shorts_v1 = processor.generate_shorts_v1(video_detailed_timestamps,output_video_path)
+
+    return shorts_v1
 
 
 

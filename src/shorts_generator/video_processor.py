@@ -29,7 +29,10 @@ class VideoProcessor:
         """
         Download the video from the url
         """
-        output_video_path = os.path.join(self.video_path,"video.mp4")
+
+        video_name = self.video_url.split("/")[-1]
+
+        output_video_path = os.path.join(self.video_path,video_name)
 
         urllib.request.urlretrieve(self.video_url,output_video_path)
 
@@ -115,6 +118,35 @@ class VideoProcessor:
         print(audio_split_timestamps)
 
         return audio_split_timestamps
+    
+    def generate_shorts_v1(self,video_timestamps:list,output_video_path:str):
+        count = 1
+        shorts_links = []
+
+        video = VideoFileClip(output_video_path)
+        for item in video_timestamps:
+
+
+            start_time = item["start"] 
+            end_time = item["end"] 
+
+
+            cropped_video = video.subclipped(start_time, end_time)
+
+            shorts_saved = f"short_{count}.mp4"
+
+            cropped_video.write_videofile(shorts_saved)
+
+           
+
+            logger.info(f"\nShort saved at path: {shorts_saved}")
+
+            shorts_links.append(shorts_saved)
+
+            count +=1
+        video.close()
+
+        return shorts_links
 
 
 
