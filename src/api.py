@@ -29,15 +29,20 @@ base_path = "data"
 @app.post("/shorts")
 async def get_shorts_from_video(request:QueryRequest):
     transcriptions = []
+    short_transcriptions = []
+    shorts_v1_audio_path = []
+    final_timestamps = []
 
     video_url = request.video_url
     video_path = os.path.join(base_path,"video")
     audio_path = os.path.join(base_path,"audio")
     split_audio_path = os.path.join(base_path,"chunks")
+    shorts_audio_path = os.path.join(base_path,"shorts_audio")
 
     os.makedirs(video_path, exist_ok=True)
     os.makedirs(audio_path, exist_ok=True)
     os.makedirs(split_audio_path, exist_ok=True)
+    os.makedirs(shorts_audio_path,exist_ok=True)
 
     processor = VideoProcessor(video_url=video_url,video_path=video_path,audio_path=audio_path,split_audio_path=split_audio_path)
 
@@ -67,9 +72,29 @@ async def get_shorts_from_video(request:QueryRequest):
 
     video_detailed_timestamps = agent.video_timestamps()
 
-    shorts_v1 = processor.generate_shorts_v1(video_detailed_timestamps,output_video_path)
+    # split_shorts_audio_path = processor.split_shorts_audio(video_detailed_timestamps,output_audio_path,shorts_audio_path)
 
-    return shorts_v1
+    shorts_path = processor.generate_shorts(video_detailed_timestamps,output_video_path)
+    for id,path in enumerate(shorts_path):
+        output_audio_path = processor.extarct_audio_from_video(path,shorts=True,id=id+1,output_shorts_path=shorts_audio_path)
+        shorts_v1_audio_path.append(output_audio_path)
+
+    
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = {executor.submit(transcriber.transcribe_short, path,i+1): path for i,path in enumerate(paths)}
+            for future in as_completed(futures):
+                try:
+                    short_transcriptions.append(future.result())
+                except Exception as e:
+                    short_transcriptions.append({"error": str(e), "path": futures[future]})
+
+    for short_transcription in short_transcriptions:
+         timestamp = agent.enhance_video_timestamps(short_transcription)
+         final_timestamps.append(timestamp)
+
+    shorts_path = processor.generate_shorts(video_detailed_timestamps,output_video_path)
+         
 
 
 

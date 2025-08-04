@@ -42,7 +42,7 @@ class VideoProcessor:
 
 
 
-    def extarct_audio_from_video(self,output_video_path:str) -> str:
+    def extarct_audio_from_video(self,output_video_path:str,shorts=False,id=1,output_shorts_path=None) -> str:
         """
         Extract the audio in wav format from the video
         and delete the video after extraction.
@@ -51,7 +51,10 @@ class VideoProcessor:
         clip = VideoFileClip(output_video_path)
         audio = clip.audio
 
-        output_audio_path = os.path.join(self.audio_path,"audio.wav")
+        if shorts:
+            output_audio_path = os.path.join(output_shorts_path,f"shorts_audio_{id}.wav")
+        else:
+            output_audio_path = os.path.join(self.audio_path,"audio.wav")
 
         audio.write_audiofile(output_audio_path)
 
@@ -82,6 +85,7 @@ class VideoProcessor:
         audio_length = len(data)/rate
 
         audio_split_timestamps = []
+        split_audio_paths = []
 
         while True:
 
@@ -95,8 +99,10 @@ class VideoProcessor:
             audio_dict["overlap"] = 1
 
             audio_split_timestamps.append(audio_dict)
+            path = f'{self.split_audio}/split_audio{count}.wav'
+            wavfile.write(path, rate, split_audio)
 
-            wavfile.write(f'{self.split_audio}/split_audio{count}.wav', rate, split_audio)
+            split_audio_paths.append(path)
 
             if end > audio_length:
                 audio_split_timestamps[-1]["end"] = audio_length
@@ -119,12 +125,47 @@ class VideoProcessor:
 
         return audio_split_timestamps
     
-    def generate_shorts_v1(self,video_timestamps:list,output_video_path:str):
+
+    # def split_shorts_audio(self,output_json,output_audio_path,shorts_audio_path):
+    #     rate,data = wavfile.read(output_audio_path)
+
+    #     short_paths = []
+    #     audio_length = len(data)/rate
+
+    #     count = 1
+    #     for item in output_json:
+
+            
+                
+    #         start_time = item["start"]
+    #         end_time = item["end"] 
+    #         if end_time > audio_length:
+    #             end_time = audio_length
+    #         split_at_frame_start = rate * start_time
+    #         split_at_frame_end = rate * end_time
+
+
+
+    #         split_audio = data[split_at_frame_start:split_at_frame_end]
+
+    #         path = f'{shorts_audio_path}/shorts_audio{count}.wav'
+        
+
+    #         wavfile.write(path, rate, split_audio)
+
+    #         short_paths.append(path)
+
+    #         count +=1
+
+    #     return short_paths
+
+    
+    def generate_shorts(self,video_timestamps:list,output_video_path:str,final_shorts=False):
         count = 1
         shorts_links = []
 
-        video = VideoFileClip(output_video_path)
         for item in video_timestamps:
+            video = VideoFileClip(output_video_path)
 
 
             start_time = item["start"] 
@@ -136,8 +177,6 @@ class VideoProcessor:
             shorts_saved = f"short_{count}.mp4"
 
             cropped_video.write_videofile(shorts_saved)
-
-           
 
             logger.info(f"\nShort saved at path: {shorts_saved}")
 
