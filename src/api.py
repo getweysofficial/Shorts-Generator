@@ -34,6 +34,7 @@ async def get_shorts_from_video(request:QueryRequest):
     final_timestamps = []
 
     video_url = request.video_url
+    shorts_time = request.shorts_time
     video_path = os.path.join(base_path,"video")
     audio_path = os.path.join(base_path,"audio")
     split_audio_path = os.path.join(base_path,"chunks")
@@ -70,9 +71,8 @@ async def get_shorts_from_video(request:QueryRequest):
 
     agent = ShortsAgent(transcriptions,audio_split_timestamps)
 
-    video_detailed_timestamps = agent.video_timestamps()
+    video_detailed_timestamps = agent.video_timestamps(shorts_time)
 
-    # split_shorts_audio_path = processor.split_shorts_audio(video_detailed_timestamps,output_audio_path,shorts_audio_path)
 
     shorts_path = processor.generate_shorts(video_detailed_timestamps,output_video_path)
     for id,path in enumerate(shorts_path):
@@ -82,21 +82,22 @@ async def get_shorts_from_video(request:QueryRequest):
     
 
     with ThreadPoolExecutor(max_workers=8) as executor:
-            futures = {executor.submit(transcriber.transcribe_short, path,i+1): path for i,path in enumerate(paths)}
+            futures = {executor.submit(transcriber.transcribe_short, path,i+1): path for i,path in enumerate(shorts_v1_audio_path)}
             for future in as_completed(futures):
                 try:
                     short_transcriptions.append(future.result())
                 except Exception as e:
                     short_transcriptions.append({"error": str(e), "path": futures[future]})
 
+    short_transcriptions.sort(key=lambda x:x["id"])
+
     for short_transcription in short_transcriptions:
          timestamp = agent.enhance_video_timestamps(short_transcription)
          final_timestamps.append(timestamp)
 
-    shorts_path = processor.generate_shorts(video_detailed_timestamps,output_video_path)
+    final_shorts_path = processor.generate_shorts(final_timestamps,shorts_path,final_shorts=True)
          
-
-
+    return final_shorts_path
 
 
 

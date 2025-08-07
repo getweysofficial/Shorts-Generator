@@ -1,7 +1,8 @@
 import urllib.request
 import os
 from moviepy import VideoFileClip
-
+from moviepy.video.fx import FadeIn, FadeOut
+from moviepy.audio.fx import AudioFadeIn, AudioFadeOut, MultiplyVolume
 
 from loguru import logger
 from scipy.io import wavfile
@@ -125,58 +126,76 @@ class VideoProcessor:
 
         return audio_split_timestamps
     
-
-    # def split_shorts_audio(self,output_json,output_audio_path,shorts_audio_path):
-    #     rate,data = wavfile.read(output_audio_path)
-
-    #     short_paths = []
-    #     audio_length = len(data)/rate
-
-    #     count = 1
-    #     for item in output_json:
-
-            
-                
-    #         start_time = item["start"]
-    #         end_time = item["end"] 
-    #         if end_time > audio_length:
-    #             end_time = audio_length
-    #         split_at_frame_start = rate * start_time
-    #         split_at_frame_end = rate * end_time
-
-
-
-    #         split_audio = data[split_at_frame_start:split_at_frame_end]
-
-    #         path = f'{shorts_audio_path}/shorts_audio{count}.wav'
-        
-
-    #         wavfile.write(path, rate, split_audio)
-
-    #         short_paths.append(path)
-
-    #         count +=1
-
-    #     return short_paths
-
     
     def generate_shorts(self,video_timestamps:list,output_video_path:str,final_shorts=False):
         count = 1
         shorts_links = []
 
-        for item in video_timestamps:
-            video = VideoFileClip(output_video_path)
+        for index,item in enumerate(video_timestamps):
 
+            if final_shorts:
+                video = VideoFileClip(output_video_path[index])
+                shorts_saved = f"short_v1_{count}.mp4"
+            else:
+                video = VideoFileClip(output_video_path)
+                shorts_saved = f"short_{count}.mp4"
 
             start_time = item["start"] 
             end_time = item["end"] 
 
+            if end_time > video.duration:
+                end_time = video.duration
+
 
             cropped_video = video.subclipped(start_time, end_time)
+            if final_shorts:
+                if cropped_video.duration is None:
+                    logger.info("\nWarning: Duration not available")
+                else:
+                    logger.info(f"\nVideo duration: {cropped_video.duration} seconds")
 
-            shorts_saved = f"short_{count}.mp4"
+                fade_duration = 2
+                
+                video_with_fades = cropped_video.with_effects([
+                    FadeIn(fade_duration),
+                    FadeOut(fade_duration)
+                ])
 
-            cropped_video.write_videofile(shorts_saved)
+                if cropped_video.audio is not None:
+                    audio = cropped_video.audio
+
+                    start_segment = audio.subclipped(0, fade_duration).with_effects([
+                            MultiplyVolume(0.7),
+                            AudioFadeIn(fade_duration)
+                        ])
+                    if cropped_video.duration > 2 * fade_duration:
+                        middle_segment = audio.subclipped(fade_duration, cropped_video.duration - fade_duration)
+                    else:
+                        middle_segment = None
+                    
+                    end_segment = audio.subclipped(cropped_video.duration - fade_duration, cropped_video.duration).with_effects([
+                            AudioFadeOut(fade_duration),
+                            MultiplyVolume(0.5)
+                        ])
+            
+                    if middle_segment is not None:
+                        from moviepy import concatenate_audioclips
+                        final_audio = concatenate_audioclips([start_segment, middle_segment, end_segment])
+                    else:
+                        final_audio = audio.with_effects([
+                            AudioFadeIn(fade_duration/2),
+                            AudioFadeOut(fade_duration/2),
+                            MultiplyVolume(0.5)
+                        ])
+
+                    final_clip = video_with_fades.with_audio(final_audio)
+                else:
+                    logger.info("\nWarning: No audio track found in the video")
+                    final_clip = video_with_fades
+
+                final_clip.write_videofile(shorts_saved)
+            else:
+                cropped_video.write_videofile(shorts_saved)
 
             logger.info(f"\nShort saved at path: {shorts_saved}")
 

@@ -59,7 +59,7 @@ class AudioTranscriber:
         """
         Transcribe the short audio chunks 
         """
-    
+        print("audio_path: ",audio_path)
         with open(audio_path, "rb") as file:
             transcription = self.client.audio.transcriptions.create(
             file=(audio_path, file.read()),

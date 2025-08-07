@@ -18,7 +18,7 @@ class ShortsAgent:
 
         logger.info(f"ShortsAgent Agent Initilized\n TimeStamp Model: {settings.SHORTS_MODEL}")
 
-    def video_timestamps(self):
+    def video_timestamps(self,shorts_time:int):
 
         """
         Return the final json containing 
@@ -28,7 +28,7 @@ class ShortsAgent:
 
         response = self.client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=SHORTS_TOPIC_PROMPT.format(self.audio_split_timestamps,self.audio_transcriptions),
+            contents=SHORTS_TOPIC_PROMPT.format(self.audio_split_timestamps,self.audio_transcriptions,shorts_time),
         )
 
         lines = response.text.strip().splitlines()
