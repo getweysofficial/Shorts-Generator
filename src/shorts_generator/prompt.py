@@ -44,7 +44,7 @@ Include only complete thoughts or narrative arcs (avoid abrupt starts or ends).
 
 Use the hook to highlight the strongest opening line or curiosity-driven statement.
 
-Use main_topic to label the central idea (e.g., “how to learn coding”, “career advice”, “personal story”, “mental health tip”).
+Use main_topic to label the central idea (e.g., "how to learn coding", "career advice", "personal story", "mental health tip").
 
 Use content_type to categorize the clip's style.
 
