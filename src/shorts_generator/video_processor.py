@@ -175,7 +175,7 @@ class VideoProcessor:
                     
                     end_segment = audio.subclipped(cropped_video.duration - fade_duration, cropped_video.duration).with_effects([
                             AudioFadeOut(fade_duration),
-                            MultiplyVolume(0.5)
+                            MultiplyVolume(0.6)
                         ])
             
                     if middle_segment is not None:
