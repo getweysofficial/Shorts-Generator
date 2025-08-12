@@ -1,7 +1,8 @@
 import urllib.request
 import os
 from moviepy import VideoFileClip
-
+from moviepy.video.fx import FadeIn, FadeOut
+from moviepy.audio.fx import AudioFadeIn, AudioFadeOut, MultiplyVolume
 
 from loguru import logger
 from scipy.io import wavfile
@@ -42,7 +43,7 @@ class VideoProcessor:
 
 
 
-    def extarct_audio_from_video(self,output_video_path:str) -> str:
+    def extarct_audio_from_video(self,output_video_path:str,shorts=False,id=1,output_shorts_path=None) -> str:
         """
         Extract the audio in wav format from the video
         and delete the video after extraction.
@@ -51,7 +52,10 @@ class VideoProcessor:
         clip = VideoFileClip(output_video_path)
         audio = clip.audio
 
-        output_audio_path = os.path.join(self.audio_path,"audio.wav")
+        if shorts:
+            output_audio_path = os.path.join(output_shorts_path,f"shorts_audio_{id}.wav")
+        else:
+            output_audio_path = os.path.join(self.audio_path,"audio.wav")
 
         audio.write_audiofile(output_audio_path)
 
@@ -82,6 +86,7 @@ class VideoProcessor:
         audio_length = len(data)/rate
 
         audio_split_timestamps = []
+        split_audio_paths = []
 
         while True:
 
@@ -95,8 +100,10 @@ class VideoProcessor:
             audio_dict["overlap"] = 1
 
             audio_split_timestamps.append(audio_dict)
+            path = f'{self.split_audio}/split_audio{count}.wav'
+            wavfile.write(path, rate, split_audio)
 
-            wavfile.write(f'{self.split_audio}/split_audio{count}.wav', rate, split_audio)
+            split_audio_paths.append(path)
 
             if end > audio_length:
                 audio_split_timestamps[-1]["end"] = audio_length
@@ -119,25 +126,76 @@ class VideoProcessor:
 
         return audio_split_timestamps
     
-    def generate_shorts_v1(self,video_timestamps:list,output_video_path:str):
+    
+    def generate_shorts(self,video_timestamps:list,output_video_path:str,final_shorts=False):
         count = 1
         shorts_links = []
 
-        video = VideoFileClip(output_video_path)
-        for item in video_timestamps:
+        for index,item in enumerate(video_timestamps):
 
+            if final_shorts:
+                video = VideoFileClip(output_video_path[index])
+                shorts_saved = f"short_v1_{count}.mp4"
+            else:
+                video = VideoFileClip(output_video_path)
+                shorts_saved = f"short_{count}.mp4"
 
             start_time = item["start"] 
             end_time = item["end"] 
 
+            if end_time > video.duration:
+                end_time = video.duration
+
 
             cropped_video = video.subclipped(start_time, end_time)
+            if final_shorts:
+                if cropped_video.duration is None:
+                    logger.info("\nWarning: Duration not available")
+                else:
+                    logger.info(f"\nVideo duration: {cropped_video.duration} seconds")
 
-            shorts_saved = f"short_{count}.mp4"
+                fade_duration = 2
+                
+                video_with_fades = cropped_video.with_effects([
+                    FadeIn(fade_duration),
+                    FadeOut(fade_duration)
+                ])
 
-            cropped_video.write_videofile(shorts_saved)
+                if cropped_video.audio is not None:
+                    audio = cropped_video.audio
 
-           
+                    start_segment = audio.subclipped(0, fade_duration).with_effects([
+                            MultiplyVolume(0.7),
+                            AudioFadeIn(fade_duration)
+                        ])
+                    if cropped_video.duration > 2 * fade_duration:
+                        middle_segment = audio.subclipped(fade_duration, cropped_video.duration - fade_duration)
+                    else:
+                        middle_segment = None
+                    
+                    end_segment = audio.subclipped(cropped_video.duration - fade_duration, cropped_video.duration).with_effects([
+                            AudioFadeOut(fade_duration),
+                            MultiplyVolume(0.6)
+                        ])
+            
+                    if middle_segment is not None:
+                        from moviepy import concatenate_audioclips
+                        final_audio = concatenate_audioclips([start_segment, middle_segment, end_segment])
+                    else:
+                        final_audio = audio.with_effects([
+                            AudioFadeIn(fade_duration/2),
+                            AudioFadeOut(fade_duration/2),
+                            MultiplyVolume(0.5)
+                        ])
+
+                    final_clip = video_with_fades.with_audio(final_audio)
+                else:
+                    logger.info("\nWarning: No audio track found in the video")
+                    final_clip = video_with_fades
+
+                final_clip.write_videofile(shorts_saved)
+            else:
+                cropped_video.write_videofile(shorts_saved)
 
             logger.info(f"\nShort saved at path: {shorts_saved}")
 

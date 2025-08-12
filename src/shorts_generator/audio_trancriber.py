@@ -55,3 +55,37 @@ class AudioTranscriber:
 
         return single_transcript
     
+    def transcribe_short(self,audio_path,id):
+        """
+        Transcribe the short audio chunks 
+        """
+        print("audio_path: ",audio_path)
+        with open(audio_path, "rb") as file:
+            transcription = self.client.audio.transcriptions.create(
+            file=(audio_path, file.read()),
+            model=settings.AUDIO_TRANSCRIBE_MODEL,
+            response_format="verbose_json",
+            timestamp_granularities=["word"]
+            )
+
+            single_transcript = {}
+
+            single_transcript["id"] = id
+            single_transcript["text"] = transcription.text
+            single_transcript["word_with_timestamps"] = [ 
+            {
+                "start": item["start"],
+                "end": item["end"],
+                "word": item["word"]
+            } 
+        
+            for item in transcription.words]
+
+
+            logger.info(f"\nAudio {id} trasncribed successfully")
+
+            # os.remove(audio_path)
+
+            # logger.info(f"\nAudio {id} removed from path: {audio_path}")
+
+        return single_transcript
