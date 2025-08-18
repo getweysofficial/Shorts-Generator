@@ -2,8 +2,7 @@ from pydantic import BaseModel
 
 
 class QueryRequest(BaseModel):
-    id:str
+    user_id: str
+    user_email: str
     video_url:str
     shorts_time:int
-
-

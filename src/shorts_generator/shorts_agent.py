@@ -3,12 +3,12 @@ import json
 from google import genai
 from loguru import logger
 
-from config import Settings
+from config import get_settings
 from shorts_generator.prompt import SHORTS_TOPIC_PROMPT,SHORT_ENHANCEMENT_PROPMT
 
 
 logger = logger.bind(name="TimeStampAgent")
-settings = Settings()
+settings = get_settings()
 
 class ShortsAgent:
     def __init__(self,transcriptions:list,timestamps:list):

@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     AUDIO_TRANSCRIBE_MODEL: str = "whisper-large-v3-turbo"
 
+    # AWS S3 BUCKET Configuration
+
+    BUCKET_NAME: str
+    AWS_REGION: str
+    AWS_ACCESS_KEY: str
+    AWS_SECRET_KEY: str
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

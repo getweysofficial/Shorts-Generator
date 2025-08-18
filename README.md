@@ -7,19 +7,32 @@ A FastAPI-based backend service for generating short-form content from videos. T
 ```bash
 shorts-generator/
 ├── src/
-│ └── shorts_generator/
-│ ├── audio_transcriber.py
-│ ├── config.py
-│ ├── model.py
-│ ├── prompt.py
-│ ├── shorts_agent.py
-│ ├── utils.py
-│ ├── video_processor.py
-│ └── api.py
+│   ├── shorts_generator/
+│   │   ├── __init__.py
+│   │   ├── __pycache__/
+│   │   ├── audio_trancriber.py   
+│   │   ├── prompt.py
+│   │   ├── shorts_agent.py
+│   │   ├── utils.py
+│   │   ├── video_processor.py
+│   │   └── __init__.py
+│   │
+│   ├── api.py
+│   ├── config.py
+│   ├── credentials.json   # <— Gmail credentials
+│   ├── mail_sender.py
+│   ├── model.py
+│   ├── task.py
+│   └── token.json         # <— Gmail token
+│
 ├── .env
+├── .gitignore
+├── .python-version
 ├── pyproject.toml
 ├── README.md
+├── test.py
 └── uv.lock
+
 ```
 
 
@@ -49,6 +62,14 @@ The main FastAPI app is located in src/shorts_generator/api.py
 cd src
 uvicorn api:app --reload
 ```
+
+#### For Celery
+
+```bash
+cd src
+celery -A task worker --loglevel=info 
+```
+
 ### 4. API Documentation
 
 API docs available at 

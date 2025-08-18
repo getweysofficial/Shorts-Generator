@@ -14,3 +14,10 @@ wheels/
 
 # Data
 data
+
+# Mac Cache
+.DS_Store
+
+# Credentials 
+credentials.json
+token.json
