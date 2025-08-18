@@ -12,7 +12,7 @@ from shorts_generator.utils import upload_to_s3
 
 from mail_sender import send_email
 
-logger = logger.bind("Celery Task")
+logger = logger.bind(name="CeleryTask")
 
 celery = Celery(
      "worker",
