@@ -64,14 +64,14 @@ cd src
 uvicorn api:app --reload
 
 For Server:
-uvicorn api:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
+uv run uvicorn api:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
 ```
 
 #### For Celery
 
 ```bash
 cd src
-celery -A task worker --loglevel=info
+uv run celery -A task worker --loglevel=info
 ```
 
 ### 4. API Documentation
