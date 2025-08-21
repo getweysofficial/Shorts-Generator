@@ -1,7 +1,7 @@
 
 import click
 
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from celery.result import AsyncResult
@@ -20,6 +20,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.post("/uploadfile/")
+async def create_upload_file(user_id:str,file: UploadFile):
+    from shorts_generator.utils import upload_to_s3
+
+    uploaded_file_url = upload_to_s3(file_paths=file.file,user_id=user_id,filename=file.filename,file_upload=True)
+
+    return uploaded_file_url
 
 
 @app.post("/shorts")
