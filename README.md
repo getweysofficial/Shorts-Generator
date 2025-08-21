@@ -44,6 +44,9 @@ git clone https://github.com/Saad-Ali-Khan/shorts-generator.git
 cd shorts-generator
 ```
 
+Prerequisites:
+Install uv, uvicorn, celery, redis
+
 ### 2. Install Dependencies
 
 ```bash
@@ -59,7 +62,9 @@ The main FastAPI app is located in src/shorts_generator/api.py
 ```bash
 cd src
 uvicorn api:app --reload
-uvicorn app:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
+
+For Server:
+uvicorn api:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
 ```
 
 #### For Celery
