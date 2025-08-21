@@ -1,4 +1,4 @@
-#  🎬 Online Platform Shorts Generator
+# 🎬 Online Platform Shorts Generator
 
 A FastAPI-based backend service for generating short-form content from videos. This project is structured with a clear modular architecture and uses `click` and `uvicorn` for command-line execution and ASGI server deployment.
 
@@ -10,7 +10,7 @@ shorts-generator/
 │   ├── shorts_generator/
 │   │   ├── __init__.py
 │   │   ├── __pycache__/
-│   │   ├── audio_trancriber.py   
+│   │   ├── audio_trancriber.py
 │   │   ├── prompt.py
 │   │   ├── shorts_agent.py
 │   │   ├── utils.py
@@ -35,7 +35,6 @@ shorts-generator/
 
 ```
 
-
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
@@ -55,28 +54,27 @@ uv sync
 
 The main FastAPI app is located in src/shorts_generator/api.py
 
-
 #### Using uvicorn:
 
 ```bash
 cd src
 uvicorn api:app --reload
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
 ```
 
 #### For Celery
 
 ```bash
 cd src
-celery -A task worker --loglevel=info 
+celery -A task worker --loglevel=info
 ```
 
 ### 4. API Documentation
 
-API docs available at 
+API docs available at
 
 http://127.0.0.1:8000/docs/
 
-
-### 5. Url for testing 
+### 5. Url for testing
 
 https://res.cloudinary.com/dbgre09ks/video/upload/v1753789189/How_I_became_a_Software_Engineer_at_TikTok_qftder.webm
