@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from celery.result import AsyncResult
 
+
 from task import get_shorts_from_video
 
 from model import QueryRequest
@@ -42,6 +43,18 @@ def generate_shorts(request:QueryRequest):
     task = get_shorts_from_video.delay(user_id,user_email,video_url,shorts_time)
 
     return {"message": f"Shorts generation has begun", "task_id": task.id}
+
+
+@app.post("/get-shorts/{user_id}/{task_id}")
+def get_shorts(user_id: str,task_id: str):
+    "Endpoint to get shorts of a specific video"
+
+    from shorts_generator.utils import retrieve_from_s3
+    
+    shorts_links = retrieve_from_s3(user_id,task_id)
+
+    return shorts_links
+    
 
 
 @app.post("/check-short-status/{task_id}")
