@@ -84,7 +84,7 @@ def generate_presigned_upload_url(user_id, filename, expiration=3600):
             Params={
                 'Bucket': settings.BUCKET_NAME,
                 'Key': s3_key,
-                'ContentType': content_type
+                'ContentType': 'video/*'  
             },
             ExpiresIn=expiration  # URL expires in 1 hour by default
         )
