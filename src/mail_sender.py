@@ -28,14 +28,32 @@ def get_gmail_service():
             token.write(creds.to_json())
     return build("gmail", "v1", credentials=creds)
 
-def send_email(to,shorts_path, sender="me"):
-    """Send an email with Gmail API."""
+def send_email(to, shorts_paths, sender="me"):
+    """Send an email with Gmail API (HTML formatted)."""
     service = get_gmail_service()
 
     subject = "Your Shorts Are Ready 🎬"
-    body = "Hello!\n\nYour video shorts are ready.\nYou can find them here:\n{}\n\nCheers!".format(shorts_path)
 
-    message = MIMEText(body)
+    links_html = "".join(
+        f'<li><a href="{url}" target="_blank">{os.path.basename(url)}</a></li>'
+        for url in shorts_paths
+    )
+
+    body_html = f"""
+    <html>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #2c3e50;">✨ Your Shorts Are Ready!</h2>
+        <p>Hello,</p>
+        <p>We’ve finished generating your video shorts. You can watch or download them using the links below:</p>
+        <ul style="padding-left: 20px;">
+          {links_html}
+        </ul>
+        <p style="margin-top: 20px;">Cheers,<br><b>The RawClip Team</b> 🎬</p>
+      </body>
+    </html>
+    """
+
+    message = MIMEText(body_html, "html")
     message["to"] = to
     message["from"] = sender
     message["subject"] = subject
@@ -46,5 +64,3 @@ def send_email(to,shorts_path, sender="me"):
     sent = service.users().messages().send(userId="me", body=message).execute()
     logger.info(f"Email sent to {to} (Message ID: {sent['id']})")
     return sent
-
-
