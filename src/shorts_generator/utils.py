@@ -73,7 +73,8 @@ def generate_presigned_upload_url(user_id, filename, expiration=3600):
         content_type = get_content_type(filename)
         
         # Define the S3 key where the file will be uploaded
-        s3_key = f"{user_id}/video/{sanitized_filename}"
+        # s3_key = f"{user_id}/video/{sanitized_filename}"
+        s3_key = f"{user_id}/video/{filename}"
         print(s3_key)
         print(content_type)
         print(sanitized_filename)
