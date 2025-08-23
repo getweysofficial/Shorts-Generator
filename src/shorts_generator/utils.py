@@ -58,8 +58,8 @@ def get_content_type(filename):
     # If not a video file, return the guessed type or default
     return content_type or 'application/octet-stream'
 
-def generate_presigned_upload_url(user_id, filename, expiration=3600):
-    """Generate a presigned URL for direct S3 upload."""
+def generate_presigned_post(user_id, filename, expiration=3600):
+    """Generate a presigned POST URL for direct S3 upload."""
     try:
         s3_client = boto3.client(
             "s3",
@@ -74,28 +74,28 @@ def generate_presigned_upload_url(user_id, filename, expiration=3600):
         
         # Define the S3 key where the file will be uploaded
         s3_key = f"{user_id}/video/{sanitized_filename}"
-        print(s3_key)
-        print(content_type)
-        print(sanitized_filename)
         
-        # Generate presigned URL for PUT operation
-        presigned_url = s3_client.generate_presigned_url(
-            'put_object',
-            Params={
-                'Bucket': settings.BUCKET_NAME,
-                'Key': s3_key,
-                'ContentType': content_type
+        # Generate presigned POST
+        presigned_post = s3_client.generate_presigned_post(
+            Bucket=settings.BUCKET_NAME,
+            Key=s3_key,
+            Fields={
+                'Content-Type': content_type,
             },
-            ExpiresIn=expiration  # URL expires in 1 hour by default
+            Conditions=[
+                {'Content-Type': content_type},
+                ['content-length-range', 0, 512 * 1024 * 1024],  # 100MB max file size
+            ],
+            ExpiresIn=expiration
         )
-        print(presigned_url)
         
-        # Return both the presigned URL and the final S3 URL
+        # Return both the presigned POST data and the final S3 URL
         final_url = f"https://{settings.BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
         
-        logger.info(f"Generated presigned URL for {s3_key} with content type: {content_type}")
+        logger.info(f"Generated presigned POST for {s3_key} with content type: {content_type}")
         return {
-            "presigned_url": presigned_url,
+            "url": presigned_post["url"],
+            "fields": presigned_post["fields"],
             "final_url": final_url,
             "s3_key": s3_key,
             "sanitized_filename": sanitized_filename,
@@ -106,7 +106,7 @@ def generate_presigned_upload_url(user_id, filename, expiration=3600):
         logger.error("AWS credentials not available.")
         raise
     except Exception as e:
-        logger.error(f"Error generating presigned URL: {e}")
+        logger.error(f"Error generating presigned POST: {e}")
         raise
 
 def upload_to_s3(file_paths,user_id,task_id=None,filename=None,file_upload=False):
