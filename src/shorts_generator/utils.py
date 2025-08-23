@@ -74,6 +74,9 @@ def generate_presigned_upload_url(user_id, filename, expiration=3600):
         
         # Define the S3 key where the file will be uploaded
         s3_key = f"{user_id}/video/{sanitized_filename}"
+        print(s3_key)
+        print(content_type)
+        print(sanitized_filename)
         
         # Generate presigned URL for PUT operation
         presigned_url = s3_client.generate_presigned_url(
@@ -85,6 +88,7 @@ def generate_presigned_upload_url(user_id, filename, expiration=3600):
             },
             ExpiresIn=expiration  # URL expires in 1 hour by default
         )
+        print(presigned_url)
         
         # Return both the presigned URL and the final S3 URL
         final_url = f"https://{settings.BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
