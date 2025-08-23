@@ -32,16 +32,19 @@ async def create_upload_file(user_id: str, file: UploadFile):
 
 @app.post("/get-upload-url/")
 async def get_upload_url(user_id: str, filename: str):
-    """Generate a presigned URL for direct S3 upload."""
-    from shorts_generator.utils import generate_presigned_upload_url
+    """Generate a presigned POST URL for direct S3 upload."""
+    from shorts_generator.utils import generate_presigned_post
     
     try:
-        result = generate_presigned_upload_url(user_id=user_id, filename=filename)
+        result = generate_presigned_post(user_id=user_id, filename=filename)
         return {
             "success": True,
-            "presigned_url": result["presigned_url"],
+            "url": result["url"],
+            "fields": result["fields"],
             "final_url": result["final_url"],
-            "s3_key": result["s3_key"]
+            "s3_key": result["s3_key"],
+            "sanitized_filename": result["sanitized_filename"],
+            "content_type": result["content_type"]
         }
     except Exception as e:
         return {
