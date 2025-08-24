@@ -1,4 +1,7 @@
 import boto3
+import mimetypes
+import re
+from datetime import datetime
 from botocore.exceptions import NoCredentialsError
 from loguru import logger
 
@@ -6,6 +9,105 @@ from config import get_settings
 
 logger = logger.bind(name="Utils")
 settings = get_settings()
+
+def sanitize_filename(filename):
+    """Convert filename to proper format: abc-xyz-timestamp.extension"""
+    # Remove file extension
+    name, ext = filename.rsplit('.', 1) if '.' in filename else (filename, '')
+    
+    # Replace spaces and special characters with hyphens
+    sanitized_name = re.sub(r'[^a-zA-Z0-9]', '-', name)
+    # Remove multiple consecutive hyphens
+    sanitized_name = re.sub(r'-+', '-', sanitized_name)
+    # Remove leading/trailing hyphens
+    sanitized_name = sanitized_name.strip('-')
+    
+    # Add timestamp
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    
+    # Reconstruct filename
+    if ext:
+        return f"{sanitized_name}-{timestamp}.{ext.lower()}"
+    else:
+        return f"{sanitized_name}-{timestamp}"
+
+def get_content_type(filename):
+    """Get proper content type based on file extension"""
+    # Get MIME type from filename
+    content_type, _ = mimetypes.guess_type(filename)
+    
+    # Map common video extensions to proper MIME types
+    video_extensions = {
+        '.mp4': 'video/mp4',
+        '.avi': 'video/x-msvideo',
+        '.mov': 'video/quicktime',
+        '.mkv': 'video/x-matroska',
+        '.wmv': 'video/x-ms-wmv',
+        '.flv': 'video/x-flv',
+        '.webm': 'video/webm',
+        '.m4v': 'video/x-m4v',
+        '.3gp': 'video/3gpp',
+        '.ogv': 'video/ogg'
+    }
+    
+    # Check if it's a video file
+    for ext, mime_type in video_extensions.items():
+        if filename.lower().endswith(ext):
+            return mime_type
+    
+    # If not a video file, return the guessed type or default
+    return content_type or 'application/octet-stream'
+
+def generate_presigned_post(user_id, filename, expiration=3600):
+    """Generate a presigned POST URL for direct S3 upload."""
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            region_name=settings.AWS_REGION,
+        )
+        
+        # Sanitize filename and get content type
+        sanitized_filename = sanitize_filename(filename)
+        content_type = get_content_type(filename)
+        
+        # Define the S3 key where the file will be uploaded
+        s3_key = f"{user_id}/video/{sanitized_filename}"
+        
+        # Generate presigned POST
+        presigned_post = s3_client.generate_presigned_post(
+            Bucket=settings.BUCKET_NAME,
+            Key=s3_key,
+            Fields={
+                'Content-Type': content_type,
+            },
+            Conditions=[
+                {'Content-Type': content_type},
+                ['content-length-range', 0, 512 * 1024 * 1024],  # 100MB max file size
+            ],
+            ExpiresIn=expiration
+        )
+        
+        # Return both the presigned POST data and the final S3 URL
+        final_url = f"https://{settings.BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
+        
+        logger.info(f"Generated presigned POST for {s3_key} with content type: {content_type}")
+        return {
+            "url": presigned_post["url"],
+            "fields": presigned_post["fields"],
+            "final_url": final_url,
+            "s3_key": s3_key,
+            "sanitized_filename": sanitized_filename,
+            "content_type": content_type
+        }
+        
+    except NoCredentialsError:
+        logger.error("AWS credentials not available.")
+        raise
+    except Exception as e:
+        logger.error(f"Error generating presigned POST: {e}")
+        raise
 
 def upload_to_s3(file_paths,user_id,task_id=None,filename=None,file_upload=False):
     """Upload a file to an S3 bucket."""

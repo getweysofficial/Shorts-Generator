@@ -23,12 +23,34 @@ app.add_middleware(
 )
 
 @app.post("/uploadfile/")
-async def create_upload_file(user_id:str,file: UploadFile):
+async def create_upload_file(user_id: str, file: UploadFile):
     from shorts_generator.utils import upload_to_s3
 
     uploaded_file_url = upload_to_s3(file_paths=file.file,user_id=user_id,filename=file.filename,file_upload=True)
 
     return uploaded_file_url
+
+@app.post("/get-upload-url/")
+async def get_upload_url(user_id: str, filename: str):
+    """Generate a presigned POST URL for direct S3 upload."""
+    from shorts_generator.utils import generate_presigned_post
+    
+    try:
+        result = generate_presigned_post(user_id=user_id, filename=filename)
+        return {
+            "success": True,
+            "url": result["url"],
+            "fields": result["fields"],
+            "final_url": result["final_url"],
+            "s3_key": result["s3_key"],
+            "sanitized_filename": result["sanitized_filename"],
+            "content_type": result["content_type"]
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @app.post("/shorts")
