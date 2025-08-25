@@ -59,7 +59,7 @@ def generate_shorts(request:QueryRequest):
 
     user_id = request.user_id
     user_email = request.user_email
-    video_url = request.video_url
+    video_url = str(request.video_url)
     shorts_time = request.shorts_time
 
     task = get_shorts_from_video.delay(user_id,user_email,video_url,shorts_time)
