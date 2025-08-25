@@ -18,7 +18,7 @@ settings = get_settings()
 
 class VideoProcessor:
     def __init__(self,video_url:str,video_path:str,audio_path:str,split_audio_path:str):
-        self.video_url = video_url
+        self.video_url = str(video_url)
         self.video_path = video_path
         self.audio_path = audio_path
         self.split_audio = split_audio_path 
