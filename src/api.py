@@ -30,7 +30,7 @@ async def create_upload_file(user_id: str, file: UploadFile):
 
     return uploaded_file_url
 
-@app.post("/get-upload-url/")
+@app.get("/get-upload-url/")
 async def get_upload_url(user_id: str, filename: str):
     """Generate a presigned POST URL for direct S3 upload."""
     from shorts_generator.utils import generate_presigned_post
