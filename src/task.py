@@ -154,6 +154,12 @@ def get_shorts_from_video(self,user_id,user_email,video_url,shorts_time):
     if os.path.exists(user_dir):
         shutil.rmtree(user_dir)
 
-    response = send_email(user_email,s3_paths)
+    # Try to send email, but don't fail the task if it fails
+    try:
+        response = send_email(user_email, s3_paths)
+        logger.info(f"Email sent successfully to {user_email}")
+    except Exception as e:
+        logger.error(f"Failed to send email to {user_email}: {e}")
+        response = {"error": "Email sending failed", "details": str(e)}
          
     return response
