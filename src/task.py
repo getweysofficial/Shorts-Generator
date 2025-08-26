@@ -1,7 +1,9 @@
 import os
 import shutil
+import requests
 from celery import Celery
 from concurrent.futures import ThreadPoolExecutor,as_completed
+from datetime import datetime
 
 from loguru import logger
 
@@ -23,6 +25,39 @@ celery = Celery(
 
 
 base_path = "data"
+
+def send_webhook_notification(user_id, task_id, shorts_data, user_email, video_url, shorts_time, transcriptions, short_transcriptions):
+    """Send webhook notification to external endpoint with all shorts data."""
+    try:
+        webhook_url = "https://webhook.site/3848e5ba-c9e0-4298-a93e-9aefe8f922d7"  # Replace with your actual webhook URL
+        
+        payload = {
+            "user_id": user_id,
+            "task_id": task_id,
+            "user_email": user_email,
+            "video_url": video_url,
+            "shorts_time": shorts_time,
+            "shorts": shorts_data,
+            "transcriptions": transcriptions,
+            "short_transcriptions": short_transcriptions,
+            "status": "completed",
+            "timestamp": str(datetime.now().isoformat())
+        }
+        
+        response = requests.post(
+            webhook_url,
+            json=payload,
+            headers={"Content-Type": "application/json"},
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            logger.info(f"Webhook notification sent successfully to {webhook_url}")
+        else:
+            logger.warning(f"Webhook notification failed with status {response.status_code}: {response.text}")
+            
+    except Exception as e:
+        logger.error(f"Failed to send webhook notification: {e}")
 
 @celery.task(bind=True)
 def get_shorts_from_video(self,user_id,user_email,video_url,shorts_time):
@@ -100,6 +135,18 @@ def get_shorts_from_video(self,user_id,user_email,video_url,shorts_time):
     local_shorts_path = processor.generate_shorts(final_timestamps,shorts_path,shorts_v1,shorts_v2,final_shorts=True)
 
     s3_paths = upload_to_s3(local_shorts_path,user_id,task_id)
+
+    # Send webhook notification with all data
+    send_webhook_notification(
+        user_id=user_id,
+        task_id=task_id,
+        shorts_data=s3_paths,
+        user_email=user_email,
+        video_url=video_url,
+        shorts_time=shorts_time,
+        transcriptions=transcriptions,
+        short_transcriptions=short_transcriptions
+    )
 
     logger.info("Removing User Saved local data of shorts generation")
 
