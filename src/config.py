@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     AWS_REGION: str
     AWS_ACCESS_KEY: str
     AWS_SECRET_KEY: str
+    SUPABASE_ANON_KEY: str
 
 
 @lru_cache(maxsize=1)

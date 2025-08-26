@@ -14,7 +14,10 @@ from shorts_generator.utils import upload_to_s3
 
 from mail_sender import send_email
 
+from config import get_settings
+
 logger = logger.bind(name="CeleryTask")
+settings = get_settings()
 
 celery = Celery(
      "worker",
@@ -29,7 +32,7 @@ base_path = "data"
 def send_webhook_notification(user_id, task_id, shorts_data, user_email, video_url, shorts_time, transcriptions, short_transcriptions):
     """Send webhook notification to external endpoint with all shorts data."""
     try:
-        webhook_url = "https://webhook.site/3848e5ba-c9e0-4298-a93e-9aefe8f922d7"  # Replace with your actual webhook URL
+        webhook_url = "https://aknmrvakxkffztnlfmzr.supabase.co/functions/v1/video-completion-webhook"
         
         payload = {
             "user_id": user_id,
@@ -44,10 +47,16 @@ def send_webhook_notification(user_id, task_id, shorts_data, user_email, video_u
             "timestamp": str(datetime.now().isoformat())
         }
         
+        # Add Authorization header with Bearer token
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {settings.SUPABASE_ANON_KEY}"  # Replace 'xyz' with your actual Bearer token
+        }
+        
         response = requests.post(
             webhook_url,
             json=payload,
-            headers={"Content-Type": "application/json"},
+            headers=headers,
             timeout=30
         )
         
