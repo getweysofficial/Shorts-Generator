@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     AWS_SECRET_KEY: str
     SUPABASE_ANON_KEY: str
 
+    # Email Configuration
+    SENDER_EMAIL_ADDRESS:str
+    APP_PASSWORD:str
+
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:

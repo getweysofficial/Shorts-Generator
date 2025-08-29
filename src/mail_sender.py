@@ -1,37 +1,18 @@
 import os
-import base64
+import smtplib
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
+from config import get_settings
 
 from loguru import logger
 
 logger = logger.bind(name="Mail Sender")
+settings = get_settings()
 
-SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
-def get_gmail_service():
-    """Authenticate and return Gmail service."""
-    creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
-            creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
-    return build("gmail", "v1", credentials=creds)
 
-def send_email(to, shorts_paths, sender="me"):
-    """Send an email with Gmail API (HTML formatted)."""
-    service = get_gmail_service()
-
+def send_email(to, shorts_paths):
     subject = "Your Shorts Are Ready 🎬"
 
     links_html = "".join(
@@ -53,14 +34,14 @@ def send_email(to, shorts_paths, sender="me"):
     </html>
     """
 
-    message = MIMEText(body_html, "html")
-    message["to"] = to
-    message["from"] = sender
-    message["subject"] = subject
+    msg = MIMEMultipart("alternative")
+    msg["From"] = settings.SENDER_EMAIL_ADDRESS
+    msg["To"] = to
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body_html, "html"))
 
-    raw_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
-    message = {"raw": raw_message}
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        server.login(settings.SENDER_EMAIL_ADDRESS, settings.APP_PASSWORD)
+        server.sendmail(settings.SENDER_EMAIL_ADDRESS, to, msg.as_string())
+    logger.info(f"Email sent to {to}")
 
-    sent = service.users().messages().send(userId="me", body=message).execute()
-    logger.info(f"Email sent to {to} (Message ID: {sent['id']})")
-    return sent
