@@ -193,9 +193,9 @@ class VideoProcessor:
                     logger.info("\nWarning: No audio track found in the video")
                     final_clip = video_with_fades
 
-                final_clip.write_videofile(shorts_saved,temp_audiofile_path=shorts_v2,remove_temp=True)
+                final_clip.write_videofile(shorts_saved,codec="libx264",audio_codec="aac",temp_audiofile_path=shorts_v2,remove_temp=True)
             else:
-                cropped_video.write_videofile(shorts_saved,temp_audiofile_path=shorts_v1,remove_temp=True)
+                cropped_video.write_videofile(shorts_saved,codec="libx264",audio_codec="aac",temp_audiofile_path=shorts_v1,remove_temp=True)
 
             logger.info(f"\nShort saved at path: {shorts_saved}")
 
