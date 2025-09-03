@@ -40,7 +40,7 @@ def send_email(to, shorts_paths):
     msg["Subject"] = subject
     msg.attach(MIMEText(body_html, "html"))
 
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+    with smtplib.SMTP_SSL(settings.SENDER_HOST, settings.SENDER_PORT) as server:
         server.login(settings.SENDER_EMAIL_ADDRESS, settings.APP_PASSWORD)
         server.sendmail(settings.SENDER_EMAIL_ADDRESS, to, msg.as_string())
     logger.info(f"Email sent to {to}")

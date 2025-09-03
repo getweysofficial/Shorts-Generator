@@ -76,7 +76,68 @@ def get_shorts(user_id: str,task_id: str):
     shorts_links = retrieve_from_s3(user_id,task_id)
 
     return shorts_links
+
+@app.delete("/delete-media/{user_id}")
+def delete_media(user_id: str, file_key: str):
+    """Delete a media file from S3 using the file key."""
+    from shorts_generator.utils import delete_from_s3
     
+    try:
+        # Validate that the file_key starts with the user_id for security
+        if not file_key.startswith(f"{user_id}/"):
+            return {
+                "success": False,
+                "error": "File key must belong to the specified user"
+            }
+        
+        success = delete_from_s3(user_id=user_id, file_key=file_key)
+        
+        if success:
+            return {
+                "success": True,
+                "message": f"File {file_key} deleted successfully",
+                "deleted_file": file_key
+            }
+        else:
+            return {
+                "success": False,
+                "error": "File not found or could not be deleted"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@app.delete("/delete-video/{user_id}")
+def delete_video(user_id: str, filename: str):
+    """Delete a video file from S3 using just the filename."""
+    from shorts_generator.utils import delete_from_s3
+    
+    try:
+        # Construct the full file key
+        file_key = f"{user_id}/video/{filename}"
+        
+        success = delete_from_s3(user_id=user_id, file_key=file_key)
+        
+        if success:
+            return {
+                "success": True,
+                "message": f"Video {filename} deleted successfully",
+                "deleted_file": file_key
+            }
+        else:
+            return {
+                "success": False,
+                "error": "Video not found or could not be deleted"
+            }
+            
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 @app.post("/check-short-status/{task_id}")

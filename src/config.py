@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     # Email Configuration
     SENDER_EMAIL_ADDRESS:str
     APP_PASSWORD:str
+    SENDER_HOST:str
+    SENDER_PORT:int
 
 
 @lru_cache(maxsize=1)

@@ -161,7 +161,7 @@ def retrieve_from_s3(user_id,task_id):
                aws_access_key_id=settings.AWS_ACCESS_KEY,
                aws_secret_access_key=settings.AWS_SECRET_KEY,
                region_name=settings.AWS_REGION,
-          )
+           )
         
         response = s3_client.list_objects_v2(Bucket=bucket_name,Prefix=folder_prefix)
 
@@ -175,4 +175,32 @@ def retrieve_from_s3(user_id,task_id):
         return shorts
     except NoCredentialsError:
         logger.info("AWS credentials not available.")
-    
+
+def delete_from_s3(user_id, file_key):
+    """Delete a specific file from S3."""
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            region_name=settings.AWS_REGION,
+        )
+        
+        # Check if the file exists before trying to delete
+        try:
+            s3_client.head_object(Bucket=settings.BUCKET_NAME, Key=file_key)
+        except s3_client.exceptions.NoSuchKey:
+            logger.warning(f"File {file_key} does not exist in S3")
+            return False
+        
+        # Delete the file
+        s3_client.delete_object(Bucket=settings.BUCKET_NAME, Key=file_key)
+        logger.info(f"Successfully deleted file: {file_key}")
+        return True
+        
+    except NoCredentialsError:
+        logger.error("AWS credentials not available.")
+        return False
+    except Exception as e:
+        logger.error(f"Error deleting file {file_key}: {e}")
+        return False 
