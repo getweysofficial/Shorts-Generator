@@ -134,7 +134,7 @@ def upload_to_s3(file_paths,user_id,task_id=None,filename=None,file_upload=False
           else:
             for i,paths in enumerate(file_paths):
                     s3_path = f"{user_id}/{task_id}/shorts/short{i+1}.mp4"
-                    s3_client.upload_file(paths, settings.BUCKET_NAME, s3_path)
+                    s3_client.upload_file(paths, settings.BUCKET_NAME, s3_path, ExtraArgs={"ContentType": "video/mp4"})
                     logger.info(f"Upload successful! s3://{settings.BUCKET_NAME}/{s3_path}")
                     uploaded_shorts.append(f"https://{settings.BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_path}")
             
