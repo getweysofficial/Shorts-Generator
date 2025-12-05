@@ -201,8 +201,14 @@ class VideoProcessor:
 
             shorts_links.append(shorts_saved)
 
-            count +=1
-        video.close()
+            # Close all video clips after processing to free memory
+            if final_shorts:
+                final_clip.close()
+                video_with_fades.close()
+            cropped_video.close()
+            video.close()
+
+            count += 1
 
         return shorts_links
 
