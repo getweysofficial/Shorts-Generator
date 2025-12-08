@@ -252,7 +252,16 @@ def fastapi_app():
     import uuid
     
     from model import QueryRequest
-    from shorts_generator.utils import upload_to_s3, generate_presigned_post, retrieve_from_s3, delete_from_s3
+    from shorts_generator.utils import (
+        upload_to_s3, 
+        generate_presigned_post, 
+        retrieve_from_s3, 
+        delete_from_s3,
+        initiate_multipart_upload,
+        generate_presigned_url_for_part,
+        complete_multipart_upload
+    )
+    from config import get_settings
 
     api = FastAPI()
     api.add_middleware(
@@ -275,7 +284,7 @@ def fastapi_app():
 
     @api.get("/get-upload-url/")
     async def get_upload_url(user_id: str, filename: str):
-        """Generate a presigned POST URL for direct S3 upload."""
+        """Generate a presigned POST URL for direct S3 upload (for files < 5GB)."""
         try:
             result = generate_presigned_post(user_id=user_id, filename=filename)
             return {
@@ -286,6 +295,84 @@ def fastapi_app():
                 "s3_key": result["s3_key"],
                 "sanitized_filename": result["sanitized_filename"],
                 "content_type": result["content_type"]
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    @api.post("/initiate-multipart-upload/")
+    async def initiate_multipart(user_id: str, filename: str):
+        """Initiate a multipart upload for large files."""
+        try:
+            result = initiate_multipart_upload(user_id=user_id, filename=filename)
+            return {
+                "success": True,
+                "upload_id": result["upload_id"],
+                "key": result["key"],
+                "final_url": result["final_url"],
+                "sanitized_filename": result["sanitized_filename"],
+                "content_type": result["content_type"]
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    @api.get("/get-multipart-upload-url/")
+    async def get_multipart_upload_url(
+        user_id: str, 
+        upload_id: str, 
+        part_number: int, 
+        key: str
+    ):
+        """Generate a presigned URL for uploading a specific part of a multipart upload."""
+        try:
+            settings = get_settings()
+            presigned_url = generate_presigned_url_for_part(
+                bucket_name=settings.BUCKET_NAME,
+                key=key,
+                upload_id=upload_id,
+                part_number=part_number
+            )
+            return {
+                "success": True,
+                "presigned_url": presigned_url
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    @api.post("/complete-multipart-upload/")
+    async def complete_multipart(
+        user_id: str,
+        upload_id: str,
+        key: str,
+        parts: list  # List of {"part_number": int, "etag": str}
+    ):
+        """Complete a multipart upload after all parts have been uploaded."""
+        try:
+            settings = get_settings()
+            # Convert parts to format expected by boto3: [{"PartNumber": int, "ETag": str}, ...]
+            formatted_parts = [
+                {"PartNumber": part["part_number"], "ETag": part["etag"]}
+                for part in parts
+            ]
+            
+            result = complete_multipart_upload(
+                bucket_name=settings.BUCKET_NAME,
+                key=key,
+                upload_id=upload_id,
+                parts=formatted_parts
+            )
+            return {
+                "success": True,
+                "final_url": result["final_url"],
+                "etag": result["etag"]
             }
         except Exception as e:
             return {

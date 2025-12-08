@@ -59,7 +59,7 @@ def get_content_type(filename):
     return content_type or 'application/octet-stream'
 
 def generate_presigned_post(user_id, filename, expiration=3600):
-    """Generate a presigned POST URL for direct S3 upload."""
+    """Generate a presigned POST URL for direct S3 upload (for files < 5GB)."""
     try:
         s3_client = boto3.client(
             "s3",
@@ -75,7 +75,7 @@ def generate_presigned_post(user_id, filename, expiration=3600):
         # Define the S3 key where the file will be uploaded
         s3_key = f"{user_id}/video/{sanitized_filename}"
         
-        # Generate presigned POST
+        # Generate presigned POST (max 5GB for single upload)
         presigned_post = s3_client.generate_presigned_post(
             Bucket=settings.BUCKET_NAME,
             Key=s3_key,
@@ -84,7 +84,7 @@ def generate_presigned_post(user_id, filename, expiration=3600):
             },
             Conditions=[
                 {'Content-Type': content_type},
-                ['content-length-range', 0, 512 * 1024 * 1024],  # 100MB max file size
+                ['content-length-range', 0, 5 * 1024 * 1024 * 1024],  # 5GB max for single upload
             ],
             ExpiresIn=expiration
         )
@@ -107,6 +107,127 @@ def generate_presigned_post(user_id, filename, expiration=3600):
         raise
     except Exception as e:
         logger.error(f"Error generating presigned POST: {e}")
+        raise
+
+
+def initiate_multipart_upload(user_id, filename):
+    """Initiate a multipart upload for large files (>5GB or when explicitly needed)."""
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            region_name=settings.AWS_REGION,
+        )
+        
+        # Sanitize filename and get content type
+        sanitized_filename = sanitize_filename(filename)
+        content_type = get_content_type(filename)
+        
+        # Define the S3 key where the file will be uploaded
+        s3_key = f"{user_id}/video/{sanitized_filename}"
+        
+        # Initiate multipart upload
+        response = s3_client.create_multipart_upload(
+            Bucket=settings.BUCKET_NAME,
+            Key=s3_key,
+            ContentType=content_type,
+        )
+        
+        upload_id = response["UploadId"]
+        final_url = f"https://{settings.BUCKET_NAME}.s3.{settings.AWS_REGION}.amazonaws.com/{s3_key}"
+        
+        logger.info(f"Initiated multipart upload for {s3_key}, upload_id: {upload_id}")
+        return {
+            "upload_id": upload_id,
+            "key": s3_key,
+            "final_url": final_url,
+            "sanitized_filename": sanitized_filename,
+            "content_type": content_type
+        }
+        
+    except NoCredentialsError:
+        logger.error("AWS credentials not available.")
+        raise
+    except Exception as e:
+        logger.error(f"Error initiating multipart upload: {e}")
+        raise
+
+
+def generate_presigned_url_for_part(bucket_name, key, upload_id, part_number, expiration=3600):
+    """Generate a presigned URL for uploading a specific part of a multipart upload."""
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            region_name=settings.AWS_REGION,
+        )
+        
+        # Generate presigned URL for uploading a part
+        presigned_url = s3_client.generate_presigned_url(
+            'upload_part',
+            Params={
+                'Bucket': bucket_name,
+                'Key': key,
+                'UploadId': upload_id,
+                'PartNumber': part_number,
+            },
+            ExpiresIn=expiration
+        )
+        
+        logger.info(f"Generated presigned URL for part {part_number} of upload {upload_id}")
+        return presigned_url
+        
+    except NoCredentialsError:
+        logger.error("AWS credentials not available.")
+        raise
+    except Exception as e:
+        logger.error(f"Error generating presigned URL for part: {e}")
+        raise
+
+
+def complete_multipart_upload(bucket_name, key, upload_id, parts):
+    """
+    Complete a multipart upload.
+    
+    Args:
+        bucket_name: S3 bucket name
+        key: S3 object key
+        upload_id: Multipart upload ID
+        parts: List of dicts with 'PartNumber' and 'ETag' for each uploaded part
+               Example: [{'PartNumber': 1, 'ETag': 'etag1'}, ...]
+    """
+    try:
+        s3_client = boto3.client(
+            "s3",
+            aws_access_key_id=settings.AWS_ACCESS_KEY,
+            aws_secret_access_key=settings.AWS_SECRET_KEY,
+            region_name=settings.AWS_REGION,
+        )
+        
+        # Complete the multipart upload
+        response = s3_client.complete_multipart_upload(
+            Bucket=bucket_name,
+            Key=key,
+            UploadId=upload_id,
+            MultipartUpload={'Parts': parts}
+        )
+        
+        final_url = response.get('Location') or f"https://{bucket_name}.s3.{settings.AWS_REGION}.amazonaws.com/{key}"
+        
+        logger.info(f"Completed multipart upload for {key}, upload_id: {upload_id}")
+        return {
+            "success": True,
+            "final_url": final_url,
+            "etag": response.get('ETag', '').strip('"')
+        }
+        
+    except NoCredentialsError:
+        logger.error("AWS credentials not available.")
+        raise
+    except Exception as e:
+        logger.error(f"Error completing multipart upload: {e}")
         raise
 
 def upload_to_s3(file_paths,user_id,task_id=None,filename=None,file_upload=False):
