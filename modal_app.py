@@ -57,7 +57,7 @@ secrets = [modal.Secret.from_name("custom-secret")]
 base_path = "/tmp/data"
 
 
-def send_webhook_notification(user_id, task_id, shorts_data, user_email, video_url, shorts_time, transcriptions, short_transcriptions):
+def send_webhook_notification(user_id, task_id, shorts_data, user_email, video_url, shorts_time, transcriptions, short_transcriptions, final_timestamps):
     """Send webhook notification to external endpoint with all shorts data."""
     from config import get_settings
     from loguru import logger
@@ -77,6 +77,7 @@ def send_webhook_notification(user_id, task_id, shorts_data, user_email, video_u
             "shorts": shorts_data,
             "transcriptions": transcriptions,
             "short_transcriptions": short_transcriptions,
+            "final_timestamps": final_timestamps,
             "status": "completed",
             "timestamp": str(datetime.now().isoformat())
         }
@@ -214,7 +215,8 @@ def generate_shorts_task(user_id: str, user_email: str, video_url: str, shorts_t
         video_url=video_url,
         shorts_time=shorts_time,
         transcriptions=transcriptions,
-        short_transcriptions=short_transcriptions
+        short_transcriptions=short_transcriptions,
+        final_timestamps=final_timestamps
     )
 
     logger.info("Removing User Saved local data of shorts generation")
