@@ -246,9 +246,11 @@ def fastapi_app():
     import sys
     sys.path.insert(0, "/root/src")
     
-    from fastapi import FastAPI
+    from fastapi import FastAPI, Body, Query
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi import UploadFile
+    from pydantic import BaseModel
+    from typing import List
     import uuid
     
     from model import QueryRequest
@@ -347,26 +349,63 @@ def fastapi_app():
                 "error": str(e)
             }
 
+    class MultipartPart(BaseModel):
+        part_number: int
+        etag: str
+
+    class CompleteMultipartRequest(BaseModel):
+        upload_id: str
+        key: str
+        parts: List[MultipartPart]
+
     @api.post("/complete-multipart-upload/")
     async def complete_multipart(
-        user_id: str,
-        upload_id: str,
-        key: str,
-        parts: list  # List of {"part_number": int, "etag": str}
+        user_id: str = Query(..., description="User ID"),
+        request: CompleteMultipartRequest = Body(...)  # JSON body
     ):
         """Complete a multipart upload after all parts have been uploaded."""
         try:
+            from loguru import logger
+            logger = logger.bind(name="CompleteMultipart")
+            
+            # Validate request
+            if not request.parts or len(request.parts) == 0:
+                return {
+                    "success": False,
+                    "error": "No parts provided for multipart upload completion"
+                }
+            
             settings = get_settings()
-            # Convert parts to format expected by boto3: [{"PartNumber": int, "ETag": str}, ...]
-            formatted_parts = [
-                {"PartNumber": part["part_number"], "ETag": part["etag"]}
-                for part in parts
-            ]
+            
+            # Validate and convert parts to format expected by boto3
+            formatted_parts = []
+            for part in request.parts:
+                if not part.etag:
+                    return {
+                        "success": False,
+                        "error": f"Missing ETag for part {part.part_number}"
+                    }
+                
+                # Ensure ETag is properly formatted (S3 ETags are wrapped in quotes)
+                etag = part.etag.strip()
+                if not etag.startswith('"'):
+                    etag = f'"{etag}"'
+                
+                formatted_parts.append({
+                    "PartNumber": part.part_number,
+                    "ETag": etag
+                })
+            
+            # Sort parts by part number to ensure correct order
+            formatted_parts.sort(key=lambda x: x["PartNumber"])
+            
+            logger.info(f"Completing multipart upload: user_id={user_id}, upload_id={request.upload_id}, key={request.key}, parts_count={len(formatted_parts)}")
+            logger.debug(f"Parts: {formatted_parts[:3]}...")  # Log first 3 parts for debugging
             
             result = complete_multipart_upload(
                 bucket_name=settings.BUCKET_NAME,
-                key=key,
-                upload_id=upload_id,
+                key=request.key,
+                upload_id=request.upload_id,
                 parts=formatted_parts
             )
             return {
@@ -375,6 +414,9 @@ def fastapi_app():
                 "etag": result["etag"]
             }
         except Exception as e:
+            from loguru import logger
+            logger = logger.bind(name="CompleteMultipart")
+            logger.error(f"Error completing multipart upload: {e}", exc_info=True)
             return {
                 "success": False,
                 "error": str(e)

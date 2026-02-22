@@ -143,11 +143,35 @@ class VideoProcessor:
             start_time = item["start"] 
             end_time = item["end"] 
 
+            # Validate timestamps
+            if start_time < 0:
+                logger.warning(f"Invalid start_time {start_time} for short {count}, skipping")
+                continue
+                
+            if end_time <= start_time:
+                logger.warning(f"Invalid end_time {end_time} <= start_time {start_time} for short {count}, skipping")
+                continue
+                
+            if start_time >= video.duration:
+                logger.warning(f"start_time {start_time} >= video duration {video.duration} for short {count}, skipping")
+                continue
+
             if end_time > video.duration:
                 end_time = video.duration
-
+                
+            # Ensure minimum duration
+            if end_time - start_time < 0.5:
+                logger.warning(f"Clip duration too short ({end_time - start_time}s) for short {count}, skipping")
+                continue
 
             cropped_video = video.subclipped(start_time, end_time)
+            
+            # Validate cropped video
+            if cropped_video.duration is None or cropped_video.duration <= 0:
+                logger.warning(f"Invalid cropped video duration for short {count}, skipping")
+                cropped_video.close()
+                video.close()
+                continue
             if final_shorts:
                 if cropped_video.duration is None:
                     logger.info("\nWarning: Duration not available")
@@ -193,9 +217,39 @@ class VideoProcessor:
                     logger.info("\nWarning: No audio track found in the video")
                     final_clip = video_with_fades
 
-                final_clip.write_videofile(shorts_saved,codec="libx264",audio_codec="aac",temp_audiofile_path=shorts_v2,remove_temp=True)
+                # Validate before writing final clip
+                try:
+                    if final_clip.audio is not None:
+                        audio_duration = final_clip.audio.duration
+                        if audio_duration is None or audio_duration <= 0:
+                            logger.warning(f"Invalid audio duration for final short {count}, writing without audio")
+                            final_clip = final_clip.without_audio()
+                    
+                    final_clip.write_videofile(shorts_saved,codec="libx264",audio_codec="aac",temp_audiofile_path=shorts_v2,remove_temp=True)
+                except Exception as e:
+                    logger.error(f"Error writing final video for short {count}: {e}")
+                    if final_shorts:
+                        final_clip.close()
+                        video_with_fades.close()
+                    cropped_video.close()
+                    video.close()
+                    continue
             else:
-                cropped_video.write_videofile(shorts_saved,codec="libx264",audio_codec="aac",temp_audiofile_path=shorts_v1,remove_temp=True)
+                # Validate audio before writing
+                try:
+                    if cropped_video.audio is not None:
+                        # Check if audio duration is valid
+                        audio_duration = cropped_video.audio.duration
+                        if audio_duration is None or audio_duration <= 0:
+                            logger.warning(f"Invalid audio duration for short {count}, writing without audio")
+                            cropped_video = cropped_video.without_audio()
+                    
+                    cropped_video.write_videofile(shorts_saved,codec="libx264",audio_codec="aac",temp_audiofile_path=shorts_v1,remove_temp=True)
+                except Exception as e:
+                    logger.error(f"Error writing video for short {count}: {e}")
+                    cropped_video.close()
+                    video.close()
+                    continue
 
             logger.info(f"\nShort saved at path: {shorts_saved}")
 
