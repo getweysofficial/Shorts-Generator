@@ -64,11 +64,17 @@ For hook_strength, rate how powerful the opening hook of the clip is:
 - "Medium" — decent opener but not immediately captivating
 - "Low" — weak or slow opener that needs improvement
 
-For confidence_score, rate the overall viral potential and quality of the clip from 0 to 100:
-- 90–100: Exceptional. Near-perfect viral potential, strong hook, clear value, great pacing.
-- 75–89: Strong clip with minor weaknesses.
-- 60–74: Decent clip, some engagement value but average execution.
-- Below 60: Weak clip — unclear, slow, or low value. Only include if no better option exists.
+For confidence_score, rate the overall viral potential and quality of the clip from 0 to 100.
+Be brutally honest — most clips from average videos should score in the 55–75 range. Reserve high scores only for genuinely standout content.
+
+Scoring guide:
+- 88–100: Rare. Immediately scroll-stopping hook, extremely high value, perfect pacing, would go viral on its own. Less than 5% of clips deserve this.
+- 75–87: Strong clip. Clear value, good hook, minor weaknesses in pacing or depth.
+- 60–74: Decent clip. Publishable but not exciting. Average hook, solid but forgettable content.
+- 45–59: Mediocre. Slow start, weak hook, or the insight is not that compelling.
+- Below 45: Weak. Confusing, low energy, or very little standalone value.
+
+Important: Do NOT cluster scores around 90. If you are giving every clip above 85, you are not being critical enough. A typical batch of clips from a good (but not exceptional) video should average around 65–75, with maybe one clip breaking 80.
 
 Output a list of JSON segments ready to be used for automatic video clipping and titling.
 """
@@ -98,7 +104,7 @@ Respond ONLY with a single JSON object in this format:
   "summary": string,
   "clip_label": string,    // preserve from original: Hook | Insight | Educational | Story | Controversial | Question
   "hook_strength": string, // re-evaluate after trimming: High | Medium | Low
-  "confidence_score": integer  // re-evaluate after trimming: 0-100
+  "confidence_score": integer  // re-evaluate after trimming: 0-100. Be critical — most clips should land 55–75. Only score above 85 if the clip is genuinely exceptional.
 }}
 
 Make sure:
